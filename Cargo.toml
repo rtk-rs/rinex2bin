@@ -7,18 +7,14 @@ description = "RINEX to BINEX serialization"
 homepage = "https://github.com/rtk-rs"
 repository = "https://github.com/rtk-rs/rinex2bin"
 keywords = ["rinex", "geo"] 
->>>>>>> f114c08 (Add sources)
 categories = ["science", "science::geo", "command-line-interface", "command-line-utilities"]
 edition = "2021"
 readme = "README.md"
 
 [dependencies]
 thiserror = "2"
-
 log = "0.4"
 flate2 = "1"
 binex = "0.4.0"
-thiserror = "2"
-
 clap = { version = "4.5", features = ["derive", "color"] }
-rinex = { version = "=0.17.0-alpha-1", features = ["flate2", "binex"] }
+rinex = { git = "https://github.com/georust/rinex", branch = "rinex-backend", features = ["flate2", "binex"] }

@@ -11,11 +11,7 @@ impl Cli {
     pub fn new() -> Self {
         Self {
             matches: {
-<<<<<<< HEAD
                 Command::new("rinex2bin")
-=======
-                Command::new("rnx2bin")
->>>>>>> f114c08 (Add sources)
                     .author("Guillaume W. Bres <guillaume.bressaix@gmail.com>")
                     .version(env!("CARGO_PKG_VERSION"))
                     .about("RINEX to BINEX")
