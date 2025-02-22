@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   publish_crates:
-    name: Release Libraries
+    name: Release Crate
     runs-on: ubuntu-latest
     continue-on-error: true
     if: github.ref_type == 'tag'
