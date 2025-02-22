@@ -1,13 +1,17 @@
 mod cli;
 use cli::Cli;
 
+#[macro_use]
+extern crate log;
+
 use log::{debug, info};
+use env_logger::{Builder, Target};
 
 use rinex::prelude::{binex::RNX2BIN, FormattingError, ParsingError, Rinex};
 
 use std::{
     fs::File,
-    io::Write,
+    io::{Write, BufWriter},
     path::{Path, PathBuf},
 };
 
@@ -92,27 +96,18 @@ enum Error {
     FormattingError(#[from] FormattingError),
 }
 
-fn workspace(cli: &Cli) -> PathBuf {
-    if let Some(workspace) = cli.workspace() {
-        Path::new(workspace).to_path_buf()
-    } else {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join("WORKSPACE")
-    }
-}
-
-fn binex_streaming(output: &mut Output, rnx2bin: &mut RNX2BIN) {
+fn binex_streaming<W: Write>(streamer: &mut RNX2BIN, w: &mut BufWriter<W>) {
     const BUF_SIZE: usize = 4096;
     let mut buf = [0; BUF_SIZE];
-    debug!("RNX2BIN streaming!");
+    debug!("Streaming started!");
     loop {
-        match rnx2bin.next() {
+        match streamer.next() {
             Some(msg) => {
+                debug!("Streaming: {:?}", msg);
                 msg.encode(&mut buf, BUF_SIZE)
                     .unwrap_or_else(|e| panic!("BINEX encoding error: {:?}", e));
 
-                output
+                w
                     .write(&buf)
                     .unwrap_or_else(|e| panic!("I/O error: {}", e));
 
@@ -124,42 +119,52 @@ fn binex_streaming(output: &mut Output, rnx2bin: &mut RNX2BIN) {
 }
 
 fn main() -> Result<(), Error> {
+    let mut builder = Builder::from_default_env();
+
+    builder
+        .target(Target::Stdout)
+        .format_timestamp_secs()
+        .format_module_path(false)
+        .init();
+
     let cli = Cli::new();
 
-    let meta = cli.meta();
+    let meta = cli.binex_meta();
+
     let input_path = cli.input_path();
-
-    let workspace = workspace(&cli);
-    let output_name = cli.output_name();
-    let gzip_out = cli.gzip_output();
-    let short_name = cli.short_name();
-
-    let extension = input_path
-        .extension()
-        .expect("failed to determine file extension")
-        .to_string_lossy();
-
-    let gzip_input = extension == "gz";
+    let input_path_str = input_path.to_string_lossy().to_string();
+    let gzip_input = input_path_str.ends_with(".gz");
 
     let rinex = if gzip_input {
-        Rinex::from_gzip_file(input_path)?
+        Rinex::from_gzip_file(input_path)
     } else {
-        Rinex::from_file(input_path)?
+        Rinex::from_file(input_path)
     };
 
-    let mut output = Output::new(
-        &rinex,
-        gzip_input,
-        &workspace,
-        gzip_out,
-        short_name,
-        output_name,
-    );
+    let rinex = rinex
+        .unwrap_or_else(|e| {
+            panic!("RINEX parsing error: {}", e)
+    });
+
 
     let mut rnx2bin = rinex
         .rnx2bin(meta)
-        .unwrap_or_else(|| panic!("RNX2BIN internal failure"));
+        .unwrap_or_else(|| panic!("Failed to deploy BINEX streamer"));
 
-    binex_streaming(&mut output, &mut rnx2bin);
+
+    let fd = File::create("test.bin")
+        .unwrap_or_else(|e| panic!("Failed to create test.bin (output) file: {}", e));
+
+    let mut writer = BufWriter::new(fd);
+    // let mut output = Output::new(
+    //     &rinex,
+    //     gzip_input,
+    //     &workspace,
+    //     gzip_out,
+    //     short_name,
+    //     output_name,
+    // );
+
+    binex_streaming(&mut rnx2bin, &mut writer);
     Ok(())
 }

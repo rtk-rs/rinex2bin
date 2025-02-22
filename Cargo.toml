@@ -12,9 +12,10 @@ edition = "2021"
 readme = "README.md"
 
 [dependencies]
-thiserror = "2"
 log = "0.4"
 flate2 = "1"
-binex = "0.4.0"
+thiserror = "2"
+env_logger = "0.11"
 clap = { version = "4.5", features = ["derive", "color"] }
-rinex = { git = "https://github.com/georust/rinex", branch = "rinex-backend", features = ["flate2", "binex"] }
+binex = { git = "https://github.com/georust/rinex", branch = "main" }
+rinex = { git = "https://github.com/georust/rinex", branch = "main", features = ["flate2", "binex"] }
