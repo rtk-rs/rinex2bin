@@ -98,7 +98,7 @@ impl Cli {
     pub fn custom_bin_name(&self) -> Option<&String> {
         self.matches.get_one::<String>("output")
     }
-    
+
     pub fn short_bin_name(&self) -> bool {
         self.matches.get_flag("short")
     }

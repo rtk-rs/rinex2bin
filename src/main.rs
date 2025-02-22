@@ -4,14 +4,14 @@ use cli::Cli;
 #[macro_use]
 extern crate log;
 
-use log::{debug, info};
 use env_logger::{Builder, Target};
+use log::{debug, info};
 
 use rinex::prelude::{binex::RNX2BIN, FormattingError, ParsingError, Rinex};
 
 use std::{
     fs::File,
-    io::{Write, BufWriter},
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
 
@@ -30,7 +30,6 @@ impl Write for Output {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         Ok(0)
     }
-
     fn flush(&mut self) -> std::io::Result<()> {
         match self {
             Self::File(fd) => fd.flush(),
@@ -107,9 +106,7 @@ fn binex_streaming<W: Write>(streamer: &mut RNX2BIN, w: &mut BufWriter<W>) {
                 msg.encode(&mut buf, BUF_SIZE)
                     .unwrap_or_else(|e| panic!("BINEX encoding error: {:?}", e));
 
-                w
-                    .write(&buf)
-                    .unwrap_or_else(|e| panic!("I/O error: {}", e));
+                w.write(&buf).unwrap_or_else(|e| panic!("I/O error: {}", e));
 
                 buf = [0; BUF_SIZE];
             },
@@ -141,16 +138,17 @@ fn main() -> Result<(), Error> {
         Rinex::from_file(input_path)
     };
 
-    let rinex = rinex
-        .unwrap_or_else(|e| {
-            panic!("RINEX parsing error: {}", e)
-    });
-
+    let rinex = rinex.unwrap_or_else(|e| panic!("RINEX parsing error: {}", e));
 
     let mut rnx2bin = rinex
         .rnx2bin(meta)
         .unwrap_or_else(|| panic!("Failed to deploy BINEX streamer"));
 
+    if let Some(constellation) = rinex.header.constellation {
+        rnx2bin.custom_announce = Some(format!("rtk-rs/rinex2bin v{} from V{} {} {}", env!("CARGO_PKG_VERSION"), rinex.header.version.major, constellation, rinex.header.rinex_type));
+    } else {
+        rnx2bin.custom_announce = Some(format!("rtk-rs/rinex2bin v{} from V{} {}", env!("CARGO_PKG_VERSION"), rinex.header.version.major, rinex.header.rinex_type));
+    }
 
     let fd = File::create("test.bin")
         .unwrap_or_else(|e| panic!("Failed to create test.bin (output) file: {}", e));

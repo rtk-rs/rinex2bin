@@ -8,10 +8,13 @@ RINEX2BIN
 [![License](https://img.shields.io/badge/license-MPL_2.0-orange?style=for-the-badge&logo=mozilla)](https://github.com/rtk-rs/rinex2bin/blob/main/LICENSE)
 
 `rinex2bin` is a small command line utility to serialize your RINEX (Receiver Indepent EXchange) files
-into BINEX (Binary EXchange format). It can either serialize into a BINEX (so called "bin") file,
-or directly to an I/O for real-time streaming. The "bin" file can serve a very compact option to serve
-and distribute your GNSS/Geodetic data. The Streaming option allows you broadcasting your GNSS/Geodetic data
-in real-time over any writable interface.
+into BINEX (Binary EXchange). The tool can either
+
+- serialize into a BINEX (so called "bin") file,
+which may serve as a very compact option to distribute your GNSS/Geo data
+
+- stream directly to a writable I/O interface. Allowing to broadcast your GNSS/Geo data
+in real-time.
 
 This tool is based on the [GeoRust/RINEX parser](https://github.com/georust/rinex).
 
@@ -47,9 +50,8 @@ Logs
 ====
 
 `rinex2bin` uses the standardized Rust logger to notify of potential local issues
-during streaming. For the main reason not to interrupt the stream.
-
-To activate the logs, simply define the `RUST_LOG` environment variable, you have many sensivity levels:
+during streaming. To activate the logs, 
+simply define the `RUST_LOG` environment variable, you have many sensivity levels:
 
 - info
 - error
@@ -67,7 +69,6 @@ is guessed from the actual RINEX content.
 
 ```bash
 rinex2bin amel0010.21g
-
 ```
 
 The BINEX stream will always start with the following key elements
@@ -88,7 +89,7 @@ announcing the start of the file body
 RUST_LOG rinex2bin amel0010.21g
 
 [2025-02-22T13:21:01Z DEBUG rinex2bin] Streaming started!
-[2025-02-22T13:21:01Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2020-12-31T23:45:00 UTC, meta: RNX2BIN, comments: ["RNX2BIN from NAVIGATION DATA", "STREAM starting!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
+[2025-02-22T13:44:53Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2020-12-31T23:45:00 UTC, meta: RNX2BIN, comments: ["rtk-rs/rinex2bin v0.0.1 from V2 Glonass NAVIGATION DATA", "Stream starting!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
 [2025-02-22T13:21:01Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2020-12-31T23:45:00 UTC, meta: RNX2BIN, comments: [], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
 [2025-02-22T13:21:01Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2020-12-31T23:45:00 UTC, meta: RNX2BIN, comments: ["RINEX Header comments following!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
 [2025-02-22T13:21:01Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2020-12-31T23:45:00 UTC, meta: RNX2BIN, comments: ["Linux 2.4.21-27.ELsmp|Opteron|gcc|Linux 64|=+", "GN-RINEX 1.3        Geo++ GmbH          31-DEC-20 23:59", "gfzrnx-1.13-7761    FILE MERGE          20210101 010301 UTC"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
@@ -99,7 +100,18 @@ RUST_LOG rinex2bin amel0010.21g
 [...]
 ```
 
-It can be Gzip compressed but the file name needs to be terminated by `.gz`.
+The input RINEX can be Gzip compressed, but its name needs to be terminated by `.gz`
+
+```bash
+RUST_LOG=trace rinex2bin GEOP092I.24o.gz
+
+[2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming started!
+[2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2024-04-01T08:30:58.442760200 UTC, meta: RNX2BIN, comments: ["rtk-rs/rinex2bin v0.0.1 from V3 MIXED OBS DATA", "Stream starting!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
+[2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2024-04-01T08:30:58.442760200 UTC, meta: RNX2BIN, comments: [], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }, GeoStringFrame { fid: AgencyName, string: "Geo++" }, GeoStringFrame { fid: ObserverName, string: "Geo++" }, GeoStringFrame { fid: ReceiverType, string: "Xiaomi" }, GeoStringFrame { fid: ReceiverNumber, string: "unknown" }, GeoStringFrame { fid: ReceiverFirmwareVersion, string: "M2007J17G" }] }) }
+[2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2024-04-01T08:30:58.442760200 UTC, meta: RNX2BIN, comments: ["RINEX Header comments following!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
+[2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2024-04-01T08:30:58.442760200 UTC, meta: RNX2BIN, comments: ["************************************************************", "This file was generated by the Geo++ RINEX Logger App", "for Android devices (Version 2.1.6). If you encounter", "any issues, please send an email to android@geopp.de", "Filtering Mode: BEST", "************************************************************"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
+[2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2024-04-01T08:30:58.442760200 UTC, meta: RNX2BIN, comments: ["RINEX Record starting!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
+```
 
 ## Licensing
 
