@@ -1,91 +1,20 @@
 mod cli;
 use cli::Cli;
 
-#[macro_use]
 extern crate log;
 
 use env_logger::{Builder, Target};
-use log::{debug, info};
+use log::debug;
 
 use rinex::prelude::{binex::RNX2BIN, FormattingError, ParsingError, Rinex};
 
 use std::{
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     io::{BufWriter, Write},
-    path::{Path, PathBuf},
 };
 
 use flate2::{write::GzEncoder, Compression};
 use thiserror::Error;
-
-/// Supported output types
-pub enum Output {
-    // Simple file
-    File(File),
-    // Gzip compressed file
-    GzipFile(GzEncoder<File>),
-}
-
-impl Write for Output {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Ok(0)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        match self {
-            Self::File(fd) => fd.flush(),
-            Self::GzipFile(fd) => fd.flush(),
-        }
-    }
-}
-
-impl Output {
-    pub fn new(
-        rinex: &Rinex,
-        gzip_in: bool,
-        workspace: &Path,
-        gzip_out: bool,
-        short_name: bool,
-        custom_name: Option<&String>,
-    ) -> Self {
-        if let Some(custom) = custom_name {
-            let path = workspace.join(custom);
-
-            let fd = File::create(&path)
-                .unwrap_or_else(|e| panic!("Failed to create file within workspace: {}", e));
-
-            if gzip_in || gzip_out {
-                info!("Generating custom gzip file: {}", path.display());
-                let fd = GzEncoder::new(fd, Compression::new(5));
-                Output::GzipFile(fd)
-            } else {
-                info!("Generating custom file: {}", path.display());
-                Output::File(fd)
-            }
-        } else {
-            // auto generated name
-            let mut suffix = ".bin".to_string();
-            if gzip_out {
-                suffix.push_str(".gz");
-            }
-
-            let auto = rinex.standard_filename(short_name, Some(&suffix), None);
-
-            let path = workspace.join(auto);
-
-            let fd = File::create(&path)
-                .unwrap_or_else(|e| panic!("Failed to create file within workspace: {}", e));
-
-            if gzip_in || gzip_out {
-                info!("Generating gzip file: {}", path.display());
-                let fd = GzEncoder::new(fd, Compression::new(5));
-                Output::GzipFile(fd)
-            } else {
-                info!("Generating file: {}", path.display());
-                Output::File(fd)
-            }
-        }
-    }
-}
 
 #[derive(Debug, Error)]
 enum Error {
@@ -132,6 +61,9 @@ fn main() -> Result<(), Error> {
     let input_path_str = input_path.to_string_lossy().to_string();
     let gzip_input = input_path_str.ends_with(".gz");
 
+    let gzip_output = cli.gzip();
+    let forced_short_v2 = cli.short_bin_name();
+
     let rinex = if gzip_input {
         Rinex::from_gzip_file(input_path)
     } else {
@@ -139,6 +71,9 @@ fn main() -> Result<(), Error> {
     };
 
     let rinex = rinex.unwrap_or_else(|e| panic!("RINEX parsing error: {}", e));
+
+    let version_major = rinex.header.version.major;
+    let short_v2 = forced_short_v2 || version_major < 3;
 
     let mut rnx2bin = rinex
         .rnx2bin(meta)
@@ -148,7 +83,7 @@ fn main() -> Result<(), Error> {
         rnx2bin.custom_announce = Some(format!(
             "rtk-rs/rinex2bin v{} from V{} {} {}",
             env!("CARGO_PKG_VERSION"),
-            rinex.header.version.major,
+            version_major,
             constellation,
             rinex.header.rinex_type
         ));
@@ -156,17 +91,23 @@ fn main() -> Result<(), Error> {
         rnx2bin.custom_announce = Some(format!(
             "rtk-rs/rinex2bin v{} from V{} {}",
             env!("CARGO_PKG_VERSION"),
-            rinex.header.version.major,
+            version_major,
             rinex.header.rinex_type
         ));
     }
 
-    rnx2bin.skip_header = true;
+    if cli.skip_header() {
+        rnx2bin.skip_header = true;
+    }
 
     let output_path = if let Some(custom) = cli.custom_bin_name() {
         custom.to_string()
     } else {
-        "test.bin".to_string()
+        if gzip_output {
+            rinex.standard_filename(short_v2, Some("bin..gz"), None)
+        } else {
+            rinex.standard_filename(short_v2, Some(".bin"), None)
+        }
     };
 
     let fd = if let Some(stream) = cli.streaming() {

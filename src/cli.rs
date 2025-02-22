@@ -47,6 +47,15 @@ impl Cli {
                             .action(ArgAction::SetTrue)
                             .help("Forge a Reversed BINEX Stream.")
                     )
+                    .arg(
+                        Arg::new("skip")
+                            .long("skip")
+                            .action(ArgAction::SetTrue)
+                            .help("Skip RINEX Header section serialization.")
+                            .long_help("Skip RINEX Header section serialization.
+By default, the RINEX header is serialized after the announce message.
+Using this option, you can directly jump to the RINEX file content after the announce message.")
+                    )
                     .next_help_heading("Output File")
                     .arg(
                         Arg::new("output")
@@ -90,10 +99,6 @@ impl Cli {
         Path::new(self.matches.get_one::<String>("filepath").unwrap()).to_path_buf()
     }
 
-    pub fn custom_prefix(&self) -> Option<&String> {
-        self.matches.get_one::<String>("prefix")
-    }
-
     pub fn custom_bin_name(&self) -> Option<&String> {
         self.matches.get_one::<String>("output")
     }
@@ -107,7 +112,11 @@ impl Cli {
         Some(Path::new(stream).to_path_buf())
     }
 
-    pub fn gzip_output(&self) -> bool {
+    pub fn skip_header(&self) -> bool {
+        self.matches.get_flag("skip")
+    }
+
+    pub fn gzip(&self) -> bool {
         self.matches.get_flag("gzip")
     }
 

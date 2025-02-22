@@ -113,6 +113,25 @@ RUST_LOG=trace rinex2bin GEOP092I.24o.gz
 [2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2024-04-01T08:30:58.442760200 UTC, meta: RNX2BIN, comments: ["RINEX Record starting!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
 ```
 
+## Auto-guessed name
+
+When serializing RINEX3 in default mode, the output BIN file is automatically guessed from content to be streamed.  
+By default, RINEX3 prefers long and precise filenames:
+
+```bash
+RUST_LOG=trace rinex2bin ESBC00DNK_R_20201770000_01D_MN.rnx.gz
+ESBC00DNK_R_20201771950_01D_MN.rnx.bin as been collected
+```
+
+If you prefer to generate a shorter (V2) file name, simply use `-s`:
+
+```bash
+RUST_LOG=trace rinex2bin -s GEOP092I.24o.gz
+[...]
+[...]
+ESBC1770.20N.bin has been collected
+```
+
 ## BIN file name
 
 By default, the BIN file name is auto-guessed from the actual RINEX content.
