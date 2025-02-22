@@ -49,17 +49,10 @@ impl Cli {
                     )
                     .next_help_heading("Output File")
                     .arg(
-                        Arg::new("prefix")
-                            .long("prefix")
-                            .required(false)
-                            .action(ArgAction::Set)
-                            .value_name("directory")
-                            .help("Define custom output directory.")
-                    )
-                    .arg(
                         Arg::new("output")
                             .short('o')
                             .long("output")
+                            .value_name("filepath")
                             .action(ArgAction::Set)
                             .conflicts_with("stream")
                             .required(false)
@@ -72,15 +65,21 @@ impl Cli {
                             .action(ArgAction::SetTrue)
                             .help("Prefer V2 (short) file name when auto guessing the BIN file name.")
                     )
-                    .next_help_heading("Output Streaming")
+                    .next_help_heading("Streaming")
                     .arg(
                         Arg::new("streaming")
-                            .long("streaming")
+                            .long("stream")
                             .action(ArgAction::Set)
                             .conflicts_with("output")
                             .value_name("writable interface")
                             .required(false)
                             .help("Stream on custom I/O interface, instead of forging a BIN file.")
+                    )
+                    .arg(
+                        Arg::new("gzip")
+                            .long("gzip")
+                            .action(ArgAction::SetTrue)
+                            .help("Gzip compress the BINEX stream.")
                     )
                     .get_matches()
             },
@@ -103,8 +102,13 @@ impl Cli {
         self.matches.get_flag("short")
     }
 
-    pub fn streaming(&self) -> PathBuf {
-        Path::new(self.matches.get_one::<String>("streaming").unwrap()).to_path_buf()
+    pub fn streaming(&self) -> Option<PathBuf> {
+        let stream = self.matches.get_one::<String>("streaming")?;
+        Some(Path::new(stream).to_path_buf())
+    }
+
+    pub fn gzip_output(&self) -> bool {
+        self.matches.get_flag("gzip")
     }
 
     pub fn binex_meta(&self) -> Meta {

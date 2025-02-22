@@ -10,7 +10,7 @@ use log::{debug, info};
 use rinex::prelude::{binex::RNX2BIN, FormattingError, ParsingError, Rinex};
 
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
@@ -145,24 +145,56 @@ fn main() -> Result<(), Error> {
         .unwrap_or_else(|| panic!("Failed to deploy BINEX streamer"));
 
     if let Some(constellation) = rinex.header.constellation {
-        rnx2bin.custom_announce = Some(format!("rtk-rs/rinex2bin v{} from V{} {} {}", env!("CARGO_PKG_VERSION"), rinex.header.version.major, constellation, rinex.header.rinex_type));
+        rnx2bin.custom_announce = Some(format!(
+            "rtk-rs/rinex2bin v{} from V{} {} {}",
+            env!("CARGO_PKG_VERSION"),
+            rinex.header.version.major,
+            constellation,
+            rinex.header.rinex_type
+        ));
     } else {
-        rnx2bin.custom_announce = Some(format!("rtk-rs/rinex2bin v{} from V{} {}", env!("CARGO_PKG_VERSION"), rinex.header.version.major, rinex.header.rinex_type));
+        rnx2bin.custom_announce = Some(format!(
+            "rtk-rs/rinex2bin v{} from V{} {}",
+            env!("CARGO_PKG_VERSION"),
+            rinex.header.version.major,
+            rinex.header.rinex_type
+        ));
     }
 
-    let fd = File::create("test.bin")
-        .unwrap_or_else(|e| panic!("Failed to create test.bin (output) file: {}", e));
+    rnx2bin.skip_header = true;
 
-    let mut writer = BufWriter::new(fd);
-    // let mut output = Output::new(
-    //     &rinex,
-    //     gzip_input,
-    //     &workspace,
-    //     gzip_out,
-    //     short_name,
-    //     output_name,
-    // );
+    let output_path = if let Some(custom) = cli.custom_bin_name() {
+        custom.to_string()
+    } else {
+        "test.bin".to_string()
+    };
 
-    binex_streaming(&mut rnx2bin, &mut writer);
+    let fd = if let Some(stream) = cli.streaming() {
+        OpenOptions::new()
+            .write(true)
+            .open(&stream)
+            .unwrap_or_else(|e| panic!("Failed to open output stream {}: {}", stream.display(), e))
+    } else {
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&output_path)
+            .unwrap_or_else(|e| panic!("Failed to create output file {}: {}", output_path, e))
+    };
+
+    if cli.custom_bin_name().is_some() {
+        if output_path.ends_with(".gz") {
+            let compression = Compression::new(5);
+            let mut writer = BufWriter::new(GzEncoder::new(fd, compression));
+            binex_streaming(&mut rnx2bin, &mut writer);
+        } else {
+            let mut writer = BufWriter::new(fd);
+            binex_streaming(&mut rnx2bin, &mut writer);
+        }
+    } else {
+        let mut writer = BufWriter::new(fd);
+        binex_streaming(&mut rnx2bin, &mut writer);
+    }
+
     Ok(())
 }

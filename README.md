@@ -113,6 +113,58 @@ RUST_LOG=trace rinex2bin GEOP092I.24o.gz
 [2025-02-22T13:54:02Z DEBUG rinex2bin] Streaming: Message { meta: Meta { reversed: false, enhanced_crc: false, big_endian: true }, record: MonumentGeo(MonumentGeoRecord { epoch: 2024-04-01T08:30:58.442760200 UTC, meta: RNX2BIN, comments: ["RINEX Record starting!"], frames: [GeoStringFrame { fid: SoftwareName, string: "geo-rust v0.17.0-beta" }] }) }
 ```
 
+## BIN file name
+
+By default, the BIN file name is auto-guessed from the actual RINEX content.
+You may specify a custom name with `-o` instead:
+
+```bash
+RUST_LOG=trace rinex2bin GEOP092I.24o.gz -o GEOP092I.24o.bin
+[...]
+[...]
+GEOP092I.24o.bin has been generated
+```
+
+The output filename is absolute:
+
+```bash
+RUST_LOG=trace rinex2bin GEOP092I.24o.gz -o /tmp/GEOP092I.24o.bin
+[...]
+[...]
+/tmp/GEOP092I.24o.bin has been generated
+```
+
+Gzip compressed BINEX stream
+============================
+
+In both cases, the tool allows gzip compression of the BINEX stream, for ultimate storage efficiency.
+
+When working with the auto-guesser (default option) specify you want to Gzip compress
+the auto-named BIN file with `--gzip`:
+
+```bash
+RUST_LOG=trace rinex2bin GEOP092I.24o.gz --gzip
+[...]
+[...]
+GEOP092I.24o.bin.gz has been compressed
+```
+
+If your output file name terminates with `.gz`:
+
+```bash
+RUST_LOG=trace rinex2bin GEOP092I.24o.gz -o /tmp/GEOP092I.24o.bin.gz
+[...]
+[...]
+/tmp/GEOP092I.24o.bin.gz has been compressed
+```
+
+When streaming to an I/O, you need to add the `--gzip` flag to the streaming mode:
+
+```bash
+RUST_LOG=trace rinex2bin GEOP092I.24o.gz -s /dev/ttyUSB0 --gzip
+[...]
+```
+
 ## Licensing
 
 This application is part of the [RTK-rs framework](https://github.com/rtk-rs) which
