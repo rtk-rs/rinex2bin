@@ -27,7 +27,7 @@ jobs:
           TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: |
           cargo login $TOKEN
-          cargo publish
+          cargo publish --allow-dirty
   
   build:
     name: build
